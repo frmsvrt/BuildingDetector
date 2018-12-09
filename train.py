@@ -17,7 +17,7 @@ from metrics import BCEDiceLoss, dice_coeff
 from datareader import load_train_csv, load_test_data, DataStream
 from utils import *
 
-def main(xnames, ynames, num_epochs, lr):
+def main(xnames, ynames, num_epochs, lr, sz=256, ckpt=None):
     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     x_train, x_test, y_train, y_test = train_test_split(xnames,
                                                         ynames,
@@ -30,6 +30,10 @@ def main(xnames, ynames, num_epochs, lr):
 
     model = UNetSmall()
     model = model.cuda()
+
+    if ckpt is not None:
+        pass
+
     criterion = BCEDiceLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer,
@@ -58,12 +62,12 @@ def main(xnames, ynames, num_epochs, lr):
             if dice_metric is None:
                 dice_metric = valid_dice
                 print('Dice: %.3f' % valid_dice)
-                model.save_state_dict('./small_unet_%.pt' % dice_metric)
+                torch.save(model, './small_unet_%.3f.pt' % dice_metric)
                 print('Saved.. ')
             elif valid_dice > dice_metric:
                 dice_metric = valid_dice
                 print('Val Dice: %.3f' % valid_dice)
-                model.save_state_dict('./small_unet_%.pt' % dice_metric)
+                torch.save(model, './small_unet_%.3f.pt' % dice_metric)
                 print('Saved.. ')
             else:
                 print('Val Dice lower: %.3f' % valid_dice, 'Current dice: %.3f' % dice_metric)
@@ -99,4 +103,4 @@ def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
 
 if __name__ == '__main__':
     xnames, ynames = load_train_csv()
-    main(xnames, ynames, 30, 1e-3)
+    main(xnames, ynames, 50, 1e-3)
