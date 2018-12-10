@@ -1,11 +1,14 @@
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
+import torch.optim as optim
 
 from model import UNetSmall, AlbuNet
 from metrics import BCEDiceLoss, dice_coeff
 from datareader import load_train_csv, load_test_data, DataStream
 from utils import *
+
+from tqdm import tqdm
 
 from sklearn.model_selection import train_test_split
 
@@ -99,15 +102,15 @@ def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
             dc.append(dice_coeff(y_pred, Y))
     elif mode == 'valid':
         model.eval()
-        with torch.no_grad():
-            for idx, sample in enumerate(tqdm(dm)):
-                X = Variable(sample['sat'].cuda(), volatile=True)
-                Y = Variable(sample['mask'].cuda(), volatile=True)
+        # with torch.no_grad():
+        for idx, sample in enumerate(tqdm(dm)):
+            X = Variable(sample['sat'].cuda(), volatile=True)
+            Y = Variable(sample['mask'].cuda(), volatile=True)
 
-                y_pred = model(X)
-                y_pred = torch.nn.functional.sigmoid(y_pred)
+            y_pred = model(X)
+            y_pred = torch.nn.functional.sigmoid(y_pred)
 
-                dc.append(dice_coeff(y_pred, Y))
+            dc.append(dice_coeff(y_pred, Y))
 
     # if model == 'valid':
     #    lr_sched.step(np.mean(dc))
