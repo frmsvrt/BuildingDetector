@@ -88,3 +88,11 @@ class ToTensorTarget(object):
 
         return {'sat': transforms.functional.to_tensor(sat_img.copy()),
                 'mask': torch.from_numpy(map_img.copy()).unsqueeze(0).float().div(255)} # unsqueeze for the channel dimension
+
+
+class NormalizeTarget(transforms.Normalize):
+    """Normalize a tensor and also return the target"""
+
+    def __call__(self, sample):
+        return {'sat': transforms.functional.normalize(sample['sat'], self.mean, self.std),
+                'mask': sample['mask']}

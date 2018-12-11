@@ -31,7 +31,9 @@ def main(xnames,
                                                         random_state=123)
     tfms = transforms.Compose([RandomVFlip(),
                                RandomHFlip(),
-                               ToTensorTarget()])
+                               ToTensorTarget(),
+                               transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                    std=[0.229, 0.224, 0.225])])
     ds = DataStream(x_train, y_train, sz=sz, transform=tfms)
     vds = DataStream(x_test, y_test, sz=sz, transform=tfms)
     dm = DataLoader(ds, batch_size=bs, num_workers=23)
