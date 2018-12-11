@@ -1,3 +1,5 @@
+import os
+
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
@@ -14,7 +16,7 @@ from sklearn.model_selection import train_test_split
 
 # torch.cuda.set_device(0)
 
-def main(xnames, ynames, num_epochs, lr, sz=256, bs=30, ckpt=False, mname='./resnet.pt'):
+def main(xnames, ynames, num_epochs, lr, sz=256, bs=30, ckpt=False, mname='./resnet_256.pt'):
     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     x_train, x_test, y_train, y_test = train_test_split(xnames,
                                                         ynames,
@@ -118,6 +120,7 @@ def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
 
 if __name__ == '__main__':
     xnames, ynames = load_train_csv()
+    """
     ckpt = False
     main(xnames=xnames,
          ynames=ynames,
@@ -126,7 +129,7 @@ if __name__ == '__main__':
          sz=256,
          bs=32,
          ckpt=ckpt)
-
+    """
     # train on 512x512 crops
     if os.path.exists('./resnet_256.pt'):
         ckpt = './resnet_256.pt'

@@ -10,13 +10,13 @@ from skimage import transform
 import torch
 from torchvision import transforms
 
-def show_tensorboard_image(sat_img, 
-                           map_img, 
-                           out_img, 
-                           save_file_path=None, 
+def show_tensorboard_image(sat_img,
+                           map_img,
+                           out_img,
+                           save_file_path=None,
                            as_numpy=False):
     """
-    Show 3 images side by side for verification on tensorboard. 
+    Show 3 images side by side for verification on tensorboard.
     Takes in torch tensors.
     """
     # show different image from the batch
@@ -41,23 +41,41 @@ def show_tensorboard_image(sat_img,
     if as_numpy:
         f.canvas.draw()
         width, height = f.get_size_inches() * f.get_dpi()
-        mplimage = np.frombuffer(f.canvas.tostring_rgb(), 
-                                 dtype='uint8').reshape(int(height), 
+        mplimage = np.frombuffer(f.canvas.tostring_rgb(),
+                                 dtype='uint8').reshape(int(height),
                                                        int(width), 3)
         plt.cla()
         plt.close(f)
 
         return mplimage
-    
+
 class ToTensorX(object):
     def __call__(self, sample):
         print('as')
         return transforms.functional.to_tensor(sample)
-    
+
 class ToTensorY(object):
     def __call__(self, sample):
         return torch.from_numpy(sample).unsqueeze(0).float().div(255)
-    
+
+class RandomHFlip(transforms.RandomHorizontalFlip):
+    def __call__(self, sample):
+        p = np.random.randn()
+        if p > 0.5:
+            return {'sat' : sample['sat'][:, ::-1, :],
+                    'mask': sample['mask'][:, ::-1]}
+        else:
+            return sample
+
+class RandomVFlip(transforms.RandomVerticalFlip):
+    def __call__(self, sample):
+        p = np.random.randn()
+        if p > 0.5:
+            return {'sat' : sample['sat'][::-1, :],
+                    'mask': sample['mask'][::-1, :]}
+        else:
+            return sample
+
 class ToTensorTarget(object):
     """Convert ndarrays in sample to Tensors."""
 
@@ -68,5 +86,5 @@ class ToTensorTarget(object):
         # numpy image: H x W x C
         # torch image: C X H X W
 
-        return {'sat': transforms.functional.to_tensor(sat_img),
-                'mask': torch.from_numpy(map_img).unsqueeze(0).float().div(255)} # unsqueeze for the channel dimension
+        return {'sat': transforms.functional.to_tensor(sat_img.copy()),
+                'mask': torch.from_numpy(map_img.copy()).unsqueeze(0).float().div(255)} # unsqueeze for the channel dimension
