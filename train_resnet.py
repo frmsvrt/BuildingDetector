@@ -16,12 +16,22 @@ from sklearn.model_selection import train_test_split
 
 # torch.cuda.set_device(0)
 
-def main(xnames, ynames, num_epochs, lr, sz=256, bs=30, ckpt=False, mname='./resnet_256.pt'):
+def main(xnames,
+         ynames,
+         num_epochs,
+         lr,
+         sz=256,
+         bs=30,
+         ckpt=False,
+         mname='./resnet_256.pt',
+         ):
     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     x_train, x_test, y_train, y_test = train_test_split(xnames,
                                                         ynames,
                                                         random_state=123)
-    tfms = transforms.Compose([ToTensorTarget()])
+    tfms = transforms.Compose([RandomVFlip(),
+                               RandomHFlip(),
+                               ToTensorTarget()])
     ds = DataStream(x_train, y_train, sz=sz, transform=tfms)
     vds = DataStream(x_test, y_test, sz=sz, transform=tfms)
     dm = DataLoader(ds, batch_size=bs, num_workers=23)
@@ -120,7 +130,6 @@ def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
 
 if __name__ == '__main__':
     xnames, ynames = load_train_csv()
-    """
     ckpt = False
     main(xnames=xnames,
          ynames=ynames,
@@ -129,10 +138,9 @@ if __name__ == '__main__':
          sz=256,
          bs=32,
          ckpt=ckpt)
-    """
     # train on 512x512 crops
-    if os.path.exists('./resnet_256.pt'):
-        ckpt = './resnet_256.pt'
+    if os.path.exists('./resnet_256_aug.pt'):
+        ckpt = './resnet_256_aug.pt'
     main(xnames=xnames,
          ynames=ynames,
          num_epochs=20,
@@ -140,11 +148,11 @@ if __name__ == '__main__':
          sz=512,
          bs=16,
          ckpt=ckpt,
-         mname='./resnet_512.pt')
+         mname='./resnet_512_aug.pt')
 
     # train on 1024x1024 crops
-    if os.path.exists('./resnet_512.pt'):
-        ckpt = './resnet_512.pt'
+    if os.path.exists('./resnet_512_aug.pt'):
+        ckpt = './resnet_512_aug.pt'
     main(xnames=xnames,
          ynames=ynames,
          num_epochs=10,
@@ -152,4 +160,4 @@ if __name__ == '__main__':
          sz=1024,
          bs=4,
          ckpt=ckpt,
-         mname='./resnet_1024.pt')
+         mname='./resnet_1024_aug.pt')
