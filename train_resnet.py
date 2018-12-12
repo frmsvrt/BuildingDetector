@@ -23,7 +23,7 @@ def main(xnames,
          sz=256,
          bs=30,
          ckpt=False,
-         mname='./resnet_256.pt',
+         mname='./resnet_256_aug.pt',
          ):
     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     x_train, x_test, y_train, y_test = train_test_split(xnames,
@@ -32,7 +32,7 @@ def main(xnames,
     tfms = transforms.Compose([RandomVFlip(),
                                RandomHFlip(),
                                ToTensorTarget(),
-                               transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                               NormalizeTarget(mean=[0.485, 0.456, 0.406],
                                                     std=[0.229, 0.224, 0.225])])
     ds = DataStream(x_train, y_train, sz=sz, transform=tfms)
     vds = DataStream(x_test, y_test, sz=sz, transform=tfms)
@@ -145,7 +145,7 @@ if __name__ == '__main__':
         ckpt = './resnet_256_aug.pt'
     main(xnames=xnames,
          ynames=ynames,
-         num_epochs=20,
+         num_epochs=30,
          lr=1e-5,
          sz=512,
          bs=16,
@@ -157,7 +157,7 @@ if __name__ == '__main__':
         ckpt = './resnet_512_aug.pt'
     main(xnames=xnames,
          ynames=ynames,
-         num_epochs=10,
+         num_epochs=20,
          lr=1e-6,
          sz=1024,
          bs=4,
