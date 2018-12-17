@@ -10,6 +10,13 @@ from skimage import transform
 import torch
 from torchvision import transforms
 
+def sharping(im):
+    gK = cv2.getGaussianKernel(21, 5)
+    low_pass = cv2.filter2D(im, -1, gK)
+    res = im - low_pass
+    ret = im + res
+    return ret
+
 def show_tensorboard_image(sat_img,
                            map_img,
                            out_img,
@@ -96,3 +103,36 @@ class NormalizeTarget(transforms.Normalize):
     def __call__(self, sample):
         return {'sat': transforms.functional.normalize(sample['sat'], self.mean, self.std),
                 'mask': sample['mask']}
+
+class PaddedInput(object):
+    def __call__(self, sample):
+        padded = np.pad(sample['sat'], ((62, 62), (62, 62), (0, 0)), 'constant')
+        return {'sat' : padded,
+                'mask': sample['mask']}
+
+class Sharpnes(object):
+    def __call__(self, sample):
+        p = np.random.randn()
+        if p > 0.5:
+            return {'sat' : sharping(sample['sat']),
+                    'mask' : sample['mask']}
+        else:
+            return sample
+
+class Rotate90(object):
+    def __call__(self, sample):
+        p = np.random.rand()
+        if p > 0.5:
+            return {'sat' : np.rot90(sample['sat']),
+                    'mask': np.rot90(sample['mask'])}
+        else:
+            return sample
+
+class InvertChannel(object):
+    def __call__(self, sample):
+        p = np.random.rand()
+        if p > 0.5:
+            return {'sat' : sample['sat'][:,:,::-1],
+                    'mask': sample['mask']}
+        else:
+            return sample

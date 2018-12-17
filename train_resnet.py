@@ -31,6 +31,9 @@ def main(xnames,
                                                         random_state=123)
     tfms = transforms.Compose([RandomVFlip(),
                                RandomHFlip(),
+                               Sharpnes(),
+                               Rotate90(),
+                               InvertChannel(),
                                ToTensorTarget(),
                                NormalizeTarget(mean=[0.485, 0.456, 0.406],
                                                     std=[0.229, 0.224, 0.225])])
@@ -135,7 +138,7 @@ if __name__ == '__main__':
     ckpt = False
     main(xnames=xnames,
          ynames=ynames,
-         num_epochs=30,
+         num_epochs=50,
          lr=1e-4,
          sz=256,
          bs=32,
@@ -162,4 +165,4 @@ if __name__ == '__main__':
          sz=1024,
          bs=4,
          ckpt=ckpt,
-         mname='./resnet_1024_aug.pt')
+         mname='./resnet_1024_aug_2.0.pt')
