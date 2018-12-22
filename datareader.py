@@ -33,7 +33,7 @@ def load_train_csv():
                 fn = 'Pan-Sharpen_' + fn + '.png'
                 x_names.append(PATH/TRAIN_RGBS/fn)
                 y_names.append(PATH/MASKS_DIR/y_n)
-                
+
     return x_names, y_names
 
 def load_test_data():
@@ -46,18 +46,18 @@ class DataStream(Dataset):
         self.ynames = ynames
         self.sz = sz
         self.transform = transform
-        
+
     def __len__(self):
         return len(self.xnames)
-    
+
     def __getitem__(self, idx):
         x = io.imread(self.xnames[idx])
         y = io.imread(self.ynames[idx])
         if self.sz is not None:
             x, y = list(map(lambda x: cv2.resize(x, (self.sz, self.sz)), [x, y]))
         sample = {'sat' : x, 'mask' : y}
-        
+
         if self.transform:
             sample = self.transform(sample)
-            
+
         return sample

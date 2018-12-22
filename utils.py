@@ -92,9 +92,10 @@ class ToTensorTarget(object):
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C X H X W
+        # unsqueeze for the channel dimension
 
         return {'sat': transforms.functional.to_tensor(sat_img.copy()),
-                'mask': torch.from_numpy(map_img.copy()).unsqueeze(0).float().div(255)} # unsqueeze for the channel dimension
+                'mask': torch.from_numpy(map_img.copy()).unsqueeze(0).float().div(255)}
 
 
 class NormalizeTarget(transforms.Normalize):

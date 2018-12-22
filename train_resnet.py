@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 import torch.optim as optim
 
-from model import UNetSmall, AlbuNet
+from model import UNetSmall, AlbuNet, UNet
 from metrics import BCEDiceLoss, dice_coeff
 from datareader import load_train_csv, load_test_data, DataStream
 from utils import *
@@ -23,7 +23,7 @@ def main(xnames,
          sz=256,
          bs=30,
          ckpt=False,
-         mname='./resnet_256_aug.pt',
+         mname='./unet_256_aug.pt',
          ):
     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     x_train, x_test, y_train, y_test = train_test_split(xnames,
@@ -54,20 +54,7 @@ def main(xnames,
                            lr=lr,
                            weight_decay=1e-7,
                            )
-    """
-    lr_scheduler = optim.lr_scheduler.StepLR(optimizer,
-                                             step_size=15,
-                                             gamma=0.01)
-    """
     lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, len(ds))
-    """
-    lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                        mode='min',
-                                                        factor=0.1,
-                                                        patience=5,
-                                                        verbose=True,
-                                                        )
-    """
     dice_metric = None
 
     for epoch in range(num_epochs):
@@ -79,33 +66,36 @@ def main(xnames,
                         mode='train',
         )
         print('Dice: %.3f' % dice )
-        if dice_metric is None or dice > dice_metric:
-            valid_dice = do_epoch(dm=vdm,
-                                  model=model,
-                                  optimizer=optimizer,
-                                  criterion=criterion,
-                                  lr_sched=lr_scheduler,
-                                  mode='valid',
+        valid_dice = do_epoch(dm=vdm,
+                              model=model,
+                              optimizer=optimizer,
+                              criterion=criterion,
+                              lr_sched=lr_scheduler,
+                              mode='valid',
             )
-            if dice_metric is None:
-                dice_metric = valid_dice
-                print('Dice: %.3f' % valid_dice)
-                torch.save(model, mname)
-                print('Saved.. ')
-            elif valid_dice > dice_metric:
-                dice_metric = valid_dice
-                print('Val Dice: %.3f' % valid_dice)
-                torch.save(model, mname)
-                print('Saved.. ')
-            else:
-                print('Val Dice lower: %.3f' % valid_dice, 'Current dice: %.3f' % dice_metric)
+        if dice_metric is None:
+            dice_metric = valid_dice
+            print('Dice: %.3f' % valid_dice)
+            torch.save(model, mname)
+            print('Saved.. ')
+        elif valid_dice > dice_metric:
+            dice_metric = valid_dice
+            print('Val Dice: %.3f' % valid_dice)
+            torch.save(model, mname)
+            print('Saved.. ')
+        else:
+            print('Val Dice lower: %.3f' % valid_dice, 'Current dice: %.3f' % dice_metric)
+
+        with open('./log.log', 'a+') as f:
+            print(dice, valid_dice, file=f)
 
 def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
     dc = []
-    lr_sched.step()
+    L = []
+    # lr_sched.step()
     if mode == 'train':
-        # model.train()
-        for idx, sample in enumerate(tqdm(dm)):
+        model.train()
+        for idx, sample in enumerate(dm):
             X = Variable(sample['sat'].cuda())
             Y = Variable(sample['mask'].cuda())
 
@@ -116,18 +106,31 @@ def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
             loss.backward()
             optimizer.step()
 
+            l = loss.detach().cpu().numpy()
+
             dc.append(dice_coeff(y_pred, Y))
+            L.append(l)
+
+            print('\r', idx, '|', len(dm),
+                  'Loss: %.4f' % np.mean(L),
+                  'Dice: %.4f' % np.mean(dc),
+                  end=' ')
+
     elif mode == 'valid':
         model.eval()
-        # with torch.no_grad():
-        for idx, sample in enumerate(tqdm(dm)):
-            X = Variable(sample['sat'].cuda(), volatile=True)
-            Y = Variable(sample['mask'].cuda(), volatile=True)
+        with torch.no_grad():
+            for idx, sample in enumerate(dm):
+                X = Variable(sample['sat'].cuda())
+                Y = Variable(sample['mask'].cuda())
 
-            y_pred = model(X)
-            y_pred = torch.nn.functional.sigmoid(y_pred)
+                y_pred = model(X)
+                y_pred = torch.nn.functional.sigmoid(y_pred)
 
-            dc.append(dice_coeff(y_pred, Y))
+                dc.append(dice_coeff(y_pred, Y))
+
+                print('\r', idx, '|', len(dm),
+                      'Dice: %.4f' % np.mean(dc),
+                      end=' ')
 
     # if model == 'valid':
     #    lr_sched.step(np.mean(dc))
@@ -138,31 +141,31 @@ if __name__ == '__main__':
     ckpt = False
     main(xnames=xnames,
          ynames=ynames,
-         num_epochs=50,
+         num_epochs=100,
          lr=1e-4,
          sz=256,
          bs=32,
          ckpt=ckpt)
     # train on 512x512 crops
-    if os.path.exists('./resnet_256_aug.pt'):
-        ckpt = './resnet_256_aug.pt'
+    if os.path.exists('./unet_256_aug.pt'):
+        ckpt = './unet_256_aug.pt'
+    main(xnames=xnames,
+         ynames=ynames,
+         num_epochs=50,
+         lr=1e-5,
+         sz=512,
+         bs=14,
+         ckpt=ckpt,
+         mname='./unet_512_aug.pt')
+
+    # train on 1024x1024 crops
+    if os.path.exists('./unet_512_aug.pt'):
+        ckpt = './unet_512_aug.pt'
     main(xnames=xnames,
          ynames=ynames,
          num_epochs=30,
-         lr=1e-5,
-         sz=512,
-         bs=16,
-         ckpt=ckpt,
-         mname='./resnet_512_aug.pt')
-
-    # train on 1024x1024 crops
-    if os.path.exists('./resnet_512_aug.pt'):
-        ckpt = './resnet_512_aug.pt'
-    main(xnames=xnames,
-         ynames=ynames,
-         num_epochs=20,
          lr=1e-6,
          sz=1024,
          bs=4,
          ckpt=ckpt,
-         mname='./resnet_1024_aug_2.0.pt')
+         mname='./unet_1024_aug_2.0.pt')

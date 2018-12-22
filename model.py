@@ -5,6 +5,8 @@ from torch.nn import functional as F
 
 import torch
 
+from sae import ChannelSpatialSELayer as csSE
+
 def conv3x3(in_, out):
     return nn.Conv2d(in_, out, 3, padding=1)
 
@@ -42,7 +44,7 @@ class Interpolate(nn.Module):
         self.mode = mode
         self.scale_factor = scale_factor
         self.align_corners = align_corners
-        
+
     def forward(self, x):
         x = self.interp(x, size=self.size, scale_factor=self.scale_factor, 
                         mode=self.mode, align_corners=self.align_corners)
@@ -135,7 +137,7 @@ class UNet(nn.Module):
         super().__init__()
 
         # encoding
-        self.conv1 = encoding_block(3, 64)
+        self.conv1 = encoding_block(3, 64);
         self.maxpool1 = nn.MaxPool2d(kernel_size=2)
 
         self.conv2 = encoding_block(64, 128)
@@ -234,11 +236,8 @@ class UNetSmall(nn.Module):
 
         # decoding
         decode4 = self.decode4(conv4, center)
-
         decode3 = self.decode3(conv3, decode4)
-
         decode2 = self.decode2(conv2, decode3)
-
         decode1 = self.decode1(conv1, decode2)
 
         # final
@@ -265,11 +264,8 @@ class AlbuNet(nn.Module):
         """
         super().__init__()
         self.num_classes = num_classes
-
         self.pool = nn.MaxPool2d(2, 2)
-
         self.encoder = torchvision.models.resnet34(pretrained=pretrained)
-
         self.relu = nn.ReLU(inplace=True)
 
         self.conv1 = nn.Sequential(self.encoder.conv1,
@@ -278,13 +274,11 @@ class AlbuNet(nn.Module):
                                    self.pool)
 
         self.conv2 = self.encoder.layer1
-
         self.conv3 = self.encoder.layer2
-
         self.conv4 = self.encoder.layer3
-
         self.conv5 = self.encoder.layer4
 
+        # UNet cente
         self.center = DecoderBlockV2(512, num_filters * 8 * 2, num_filters * 8, is_deconv)
 
         self.dec5 = DecoderBlockV2(512 + num_filters * 8, num_filters * 8 * 2, num_filters * 8, is_deconv)
@@ -316,5 +310,4 @@ class AlbuNet(nn.Module):
             x_out = F.log_softmax(self.final(dec0), dim=1)
         else:
             x_out = self.final(dec0)
-
         return x_out
