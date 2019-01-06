@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 import torch.optim as optim
 
-from model import UNetSmall, AlbuNet, UNet
+from model import UNetSmall, UResNet, UNet
 from metrics import BCEDiceLoss, dice_coeff
 from datareader import load_train_csv, load_test_data, DataStream
 from utils import *
@@ -42,19 +42,20 @@ def main(xnames,
     dm = DataLoader(ds, batch_size=bs, num_workers=23)
     vdm = DataLoader(vds, batch_size=bs, num_workers=23)
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     if ckpt is not False:
-        model = torch.load(ckpt)
+        model = torch.load(ckpt).to(device)
         print('Loading model.. Finished.')
     else:
-        model = AlbuNet(num_classes=1)
-    model = model.cuda()
+        model = UResNet(num_classes=1).to(device)
 
     criterion = BCEDiceLoss()
     optimizer = optim.Adam(model.parameters(),
                            lr=lr,
                            weight_decay=1e-7,
                            )
-    lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, len(ds))
+    lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
     dice_metric = None
 
     for epoch in range(num_epochs):
@@ -64,6 +65,7 @@ def main(xnames,
                         criterion=criterion,
                         lr_sched=lr_scheduler,
                         mode='train',
+                        epoch=epoch,
         )
         print('Dice: %.3f' % dice )
         valid_dice = do_epoch(dm=vdm,
@@ -96,8 +98,8 @@ def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
     if mode == 'train':
         model.train()
         for idx, sample in enumerate(dm):
-            X = Variable(sample['sat'].cuda())
-            Y = Variable(sample['mask'].cuda())
+            X = Variable(sample['sat'].to(device))
+            Y = Variable(sample['mask'].to(device))
 
             optimizer.zero_grad()
             y_pred = model(X)
@@ -111,7 +113,8 @@ def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
             dc.append(dice_coeff(y_pred, Y))
             L.append(l)
 
-            print('\r', idx, '|', len(dm),
+            print('\r', 'Epoch: ', epoch,
+                  'step: ,' idx, '|', len(dm),
                   'Loss: %.4f' % np.mean(L),
                   'Dice: %.4f' % np.mean(dc),
                   end=' ')
@@ -132,13 +135,14 @@ def do_epoch(dm, model, optimizer, criterion, lr_sched, mode='train'):
                       'Dice: %.4f' % np.mean(dc),
                       end=' ')
 
-    # if model == 'valid':
-    #    lr_sched.step(np.mean(dc))
+    if model == 'valid':
+       lr_sched.step(np.mean(dc))
     return np.mean(dc)
 
 if __name__ == '__main__':
     xnames, ynames = load_train_csv()
     ckpt = False
+    # train on 256x256 crops
     main(xnames=xnames,
          ynames=ynames,
          num_epochs=100,
@@ -152,7 +156,7 @@ if __name__ == '__main__':
     main(xnames=xnames,
          ynames=ynames,
          num_epochs=50,
-         lr=1e-5,
+         lr=1e-4,
          sz=512,
          bs=14,
          ckpt=ckpt,
@@ -164,7 +168,7 @@ if __name__ == '__main__':
     main(xnames=xnames,
          ynames=ynames,
          num_epochs=30,
-         lr=1e-6,
+         lr=1e-5,
          sz=1024,
          bs=4,
          ckpt=ckpt,
