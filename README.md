@@ -24,5 +24,6 @@ python train_resnet.py
 For inference examples see `test model.ipynb`
 
 TODO:
-- try deeper model plus channel and spatial squeeze and excitation stuff from `say.py` - [ ]
-- try add some differen level of dilation (aka atrous conv) in center of the model - [ ]
+- [ ] try deeper model plus channel and spatial squeeze and excitation stuff from `say.py`
+- [ ] try add some differen level of dilation (aka atrous conv) in center of the model
+- [ ] use 2 channel inputs, 1st layer mask, 2nd should be building borders instead
