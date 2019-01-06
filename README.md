@@ -3,10 +3,12 @@ ___
 ![](misc/both.png)
 
 What we have:
- - torch backend with Adam optimizer
- - using resnet34 backbone plus unet decoder
+ - torch backend
+ - using resnet34 encoder plus unet decoder
  - train on 256, 512, 1024 patches, sequentialy in order to avoid BN problems
+ - Adam optimizer with reduce on plateau lr policy
  - soft dice loss
+ - logger to log.log
 
 ---
 Dependencies:
