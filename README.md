@@ -3,7 +3,7 @@ ___
 ![](misc/both.png)
 
 What we have:
- - torch backend
+ - pytorch backend
  - using resnet34 encoder plus unet decoder
  - train on 256, 512, 1024 patches, sequentialy in order to avoid BN problems
  - Adam optimizer with reduce on plateau lr policy
